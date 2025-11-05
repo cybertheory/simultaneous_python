@@ -4,6 +4,7 @@ from typing import Any
 
 from simultaneous.providers.base import ProviderAdapter, ProviderError
 from simultaneous.providers.browserbase import BrowserbaseAdapter
+from simultaneous.providers.e2b import E2BAdapter
 from simultaneous.runtime.base import RuntimeKind
 
 
@@ -30,12 +31,18 @@ def get_adapter(
         BrowserClient is a browser automation client wrapper, not a provider.
         Use Browserbase (or other providers) as the infrastructure provider,
         and use BrowserClient inside your agent code for browser automation.
+        
+        ContainerClient is a container automation client wrapper, not a provider.
+        Use E2B (or other providers) as the infrastructure provider,
+        and use ContainerClient inside your agent code for container automation.
     """
     # Normalize provider
     if provider == "auto":
-        # For MVP, default to browserbase for browser runtime
+        # For MVP, default to browserbase for browser runtime, e2b for sandbox runtime
         if runtime_kind == RuntimeKind.BROWSER:
             provider = "browserbase"
+        elif runtime_kind == RuntimeKind.SANDBOX:
+            provider = "e2b"
         else:
             raise ProviderError(
                 f"No default provider for runtime kind '{runtime_kind.value}'"
@@ -49,6 +56,14 @@ def get_adapter(
             raise ProviderError(
                 f"Unsupported provider '{provider}' for runtime '{runtime_kind.value}'. "
                 f"Supported providers: browserbase"
+            )
+    elif runtime_kind == RuntimeKind.SANDBOX:
+        if provider == "e2b":
+            return E2BAdapter(**config)
+        else:
+            raise ProviderError(
+                f"Unsupported provider '{provider}' for runtime '{runtime_kind.value}'. "
+                f"Supported providers: e2b"
             )
     else:
         raise ProviderError(

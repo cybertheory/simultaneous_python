@@ -13,7 +13,12 @@ from simultaneous.client.browser import BrowserClient
 from simultaneous.runtime.browser import Browser
 from simultaneous.runtime.base import Runtime, RuntimeKind
 from simultaneous.browsers import Browsers, BrowserBase
-from simultaneous.llms import Models, GPT4o
+from simultaneous.client.llms import (
+    Models,
+    GPT4o,
+    OPENAI_COMPUTER_USE_MINI,
+    OPENAI_COMPUTER_USE,
+)
 
 __all__ = [
     "SimClient",
@@ -26,6 +31,8 @@ __all__ = [
     "BrowserBase",
     "Models",
     "GPT4o",
+    "OPENAI_COMPUTER_USE_MINI",
+    "OPENAI_COMPUTER_USE",
 ]
 
 __version__ = "0.1.0"

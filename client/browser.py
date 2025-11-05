@@ -53,7 +53,7 @@ class BrowserClient:
         provider: str | None = None,
         provider_config: dict | None = None,
         browser_project_id: str | None = None,  # e.g., Browserbase projectId
-        model_api_key: str,
+        model_api_key: Optional[str] = None,
         model_name: str,
         model_client_options: dict | None = None,
         api_key: Optional[str] = None,
@@ -142,11 +142,26 @@ class BrowserClient:
                     config={**self._provider_config},
                 )
             if self._adapter is not None:
-                launch_opts: dict[str, Any] = {}
+                # Start with any provider config given by user
+                launch_opts: dict[str, Any] = {**(self._provider_config or {})}
+                # Ensure region default
+                launch_opts.setdefault("region", os.getenv("BROWSERBASE_REGION", "sfo"))
+                # Ensure Browserbase project id is set
                 if self._browser_project_id:
-                    launch_opts["projectId"] = self._browser_project_id
+                    launch_opts.setdefault("projectId", self._browser_project_id)
+                # Sensible defaults for recording + playback longevity
+                launch_opts.setdefault("keepAlive", True)
+                launch_opts.setdefault("timeoutSec", 600)
+                # Merge/ensure browserSettings defaults
+                bs = launch_opts.get("browserSettings") or {}
+                bs.setdefault("recordSession", True)
+                launch_opts["browserSettings"] = bs
+
                 result = await self._adapter.launch(options=launch_opts)
                 session_id = result.get("session_id")
+                # Capture provider connect URL when available for direct connection
+                if result.get("session_url"):
+                    self.session_url = result.get("session_url")
                 # Persist for external access
                 self.browserbase_session_id = session_id
         
@@ -160,12 +175,25 @@ class BrowserClient:
             "env": "BROWSERBASE",
             "browserbase_session_id": session_id,
             "use_api": False,
-            "model_api_key": self.model_api_key,
             "model_name": self.model_name,
         }
-        
-        if self.model_client_options:
-            config_params["model_client_options"] = self.model_client_options
+        # If we have a direct Browserbase connect URL, pass it through to Stagehand
+        if self.session_url:
+            config_params["browserbase_connect_url"] = self.session_url
+        # Only include model_api_key if explicitly provided; otherwise Stagehand will read from env
+        if self.model_api_key:
+            config_params["model_api_key"] = self.model_api_key
+
+        # Provide sane defaults for OpenAI O-series Computer Use models
+        # These models only support temperature=1; also instruct LiteLLM to drop unsupported params
+        default_client_opts: dict[str, Any] = {}
+        if isinstance(self.model_name, str) and self.model_name in {"o4", "o4-mini"}:
+            default_client_opts = {"temperature": 1, "drop_params": True}
+
+        # Merge client options with defaults (user-provided options take precedence)
+        merged_client_opts = {**default_client_opts, **(self.model_client_options or {})}
+        if merged_client_opts:
+            config_params["model_client_options"] = merged_client_opts
         
         # Merge with any additional options
         config_params.update(self._options)

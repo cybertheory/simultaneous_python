@@ -11,7 +11,7 @@ from simultaneous.runtime.base import Runtime
 from simultaneous.runtime.browser import Browser
 from simultaneous.client.browser import BrowserClient
 from simultaneous.browsers import Browsers
-from simultaneous.llms import Models
+from simultaneous.client.llms import Models
 from simultaneous.runtime.base import RuntimeKind
 from simultaneous.providers.router import get_adapter
 from simultaneous.client.runs import RunManager
@@ -98,7 +98,7 @@ class SimClient:
         self,
         *,
         provider: str | Browsers = "browserbase",
-        model_api_key: str,
+        model_api_key: str | None = None,
         model_name: str | Models = "gpt-4o",
         model_client_options: dict | None = None,
         adapter_config: dict | None = None,

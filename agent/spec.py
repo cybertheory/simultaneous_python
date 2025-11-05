@@ -95,6 +95,58 @@ class AgentSpec(BaseModel):
     def from_dict(cls, data: dict[str, Any]) -> "AgentSpec":
         """Create AgentSpec from dictionary."""
         return cls(**data)
+    
+    def to_file(self, path: Path | str, metadata: dict[str, Any] | None = None) -> None:
+        """Save agent spec to sim.yaml file.
+        
+        Args:
+            path: Path to sim.yaml file (will be created or overwritten)
+            metadata: Optional metadata dict to include (for API tracking info)
+        """
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Convert to dict, excluding None values
+        data = self.model_dump(exclude_none=False)
+        
+        # Convert nested models to dicts
+        yaml_data = {
+            "name": data["name"],
+            "version": data.get("version", "1.0.0"),
+            "description": data.get("description", ""),
+            "runtime": {
+                "type": data["runtime"]["type"],
+                "provider": data["runtime"].get("provider", "auto"),
+                "region": data["runtime"].get("region", "auto"),
+            },
+            "entrypoint": {
+                "command": data["entrypoint"]["command"],
+                "args": data["entrypoint"].get("args", []),
+            },
+            "inputs": [
+                {
+                    "name": i["name"],
+                    "type": i["type"],
+                    "default": i.get("default"),
+                    "description": i.get("description", ""),
+                }
+                for i in data.get("inputs", [])
+            ],
+            "outputs": [
+                {"name": o["name"], "type": o["type"]}
+                for o in data.get("outputs", [])
+            ],
+            "secrets": data.get("secrets", []),
+            "permissions": data.get("permissions", {}),
+            "timeouts": data.get("timeouts", {}),
+        }
+        
+        # Add metadata section if provided
+        if metadata:
+            yaml_data["metadata"] = metadata
+        
+        with open(path, "w") as f:
+            yaml.dump(yaml_data, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
 
 
 class SpecError(RuntimeError):
