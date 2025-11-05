@@ -1,0 +1,26 @@
+name: scrape-jobs
+version: 1.0.0
+description: Minimal scraping agent example
+runtime:
+  type: browser
+  provider: auto
+  region: auto
+entrypoint:
+  command: ["python", "main.py"]
+inputs:
+  - name: query
+    type: string
+    description: Search query
+outputs:
+  - name: rows
+    type: json
+secrets: []
+permissions:
+  network: ["*"]
+timeouts:
+  hard_seconds: 900
+
+
+
+
+
